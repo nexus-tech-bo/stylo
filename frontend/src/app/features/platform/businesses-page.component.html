@@ -1,0 +1,123 @@
+<app-page-header title="Negocios" subtitle="Salones en StyloFlow">
+  <button type="button" class="btn btn-primary" (click)="create()">
+    <app-ui-icon name="plus" class="h-4 w-4" [strokeWidth]="2.4" /> Nuevo negocio
+  </button>
+</app-page-header>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <div class="relative min-w-48 flex-1">
+    <label class="sr-only" for="business-search">Buscar negocios</label>
+    <app-ui-icon
+      name="search"
+      class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500"
+    />
+    <input
+      id="business-search"
+      type="search"
+      class="field-input pl-10"
+      placeholder="Buscar por nombre o código"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+  </div>
+  <app-segmented-tabs
+    [items]="statusFilters"
+    [selectedId]="status()"
+    (select)="status.set($event)"
+  />
+</div>
+
+<div class="glass-panel flex min-h-0 flex-col rounded-3xl p-4">
+  <div class="min-h-0 flex-1 overflow-auto">
+    @if (businesses.error()) {
+      <app-empty-state icon="alert" title="No se pudieron cargar los negocios.">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="businesses.reload()">
+          Reintentar
+        </button>
+      </app-empty-state>
+    } @else if (!businesses.hasValue()) {
+      <div class="space-y-2">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="skeleton h-14"></div>
+        }
+      </div>
+    } @else if (!businesses.value().length) {
+      <app-empty-state icon="building" title="Aún no hay negocios.">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="create()">
+          Nuevo negocio
+        </button>
+      </app-empty-state>
+    } @else if (!rows().length) {
+      <app-empty-state icon="search" title="Sin resultados." />
+    } @else {
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Negocio</th>
+            <th class="hidden sm:table-cell">Código</th>
+            <th class="hidden sm:table-cell">Estado</th>
+            <th class="hidden text-right lg:table-cell">Usuarios</th>
+            <th class="hidden text-right lg:table-cell">Ventas 30d</th>
+            <th class="hidden text-right sm:table-cell">Total 30 días</th>
+            <th class="hidden lg:table-cell">Alta</th>
+            <th class="text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (b of rows(); track b.id) {
+            <tr>
+              <td>
+                <div class="flex items-center gap-3">
+                  <span
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xs font-bold text-primary"
+                    >{{ initials(b.name) }}</span
+                  >
+                  <div class="min-w-0">
+                    <span class="font-bold text-gray-900">{{ b.name }}</span>
+                    <div class="mt-1 flex flex-wrap items-center gap-2 sm:hidden">
+                      <code class="text-xs whitespace-nowrap">{{ b.code }}</code>
+                      <app-badge
+                        [label]="statusLabel(b.active).label"
+                        [tone]="statusLabel(b.active).tone"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="hidden sm:table-cell">
+                <code class="text-xs whitespace-nowrap">{{ b.code }}</code>
+              </td>
+              <td class="hidden sm:table-cell">
+                <app-badge
+                  [label]="statusLabel(b.active).label"
+                  [tone]="statusLabel(b.active).tone"
+                />
+              </td>
+              <td class="hidden text-right tabular-nums lg:table-cell">{{ b.users }}</td>
+              <td class="hidden text-right tabular-nums lg:table-cell">{{ b.sales30d }}</td>
+              <td class="hidden text-right whitespace-nowrap tabular-nums sm:table-cell">
+                {{ b.total30d | money: false }}
+              </td>
+              <td class="hidden whitespace-nowrap lg:table-cell">
+                {{ b.createdAt | date: 'dd/MM/yyyy' }}
+              </td>
+              <td>
+                <div class="flex justify-end">
+                  <button
+                    type="button"
+                    class="btn btn-ghost btn-sm"
+                    [disabled]="busyId() === b.id"
+                    (click)="toggle(b)"
+                  >
+                    <app-ui-icon [name]="b.active ? 'pause' : 'play'" class="h-4 w-4" />
+                    {{ b.active ? 'Suspender' : 'Reactivar' }}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
+</div>

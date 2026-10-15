@@ -1,0 +1,116 @@
+<app-dialog-frame [title]="service ? 'Editar servicio' : 'Nuevo servicio'" (closed)="ref.close()">
+  <form id="service-form" [formGroup]="form" (ngSubmit)="save()" class="space-y-4" novalidate>
+    @if (error()) {
+      <p class="form-banner" role="alert">{{ error() }}</p>
+    }
+    <div>
+      <label class="field-label" for="service-category">Categoría *</label>
+      @if (categories.length) {
+        <select
+          id="service-category"
+          class="field-input"
+          cdkFocusInitial
+          formControlName="categoryId"
+        >
+          <option [ngValue]="null" disabled>Selecciona una categoría</option>
+          @for (c of categories; track c.id) {
+            <option [ngValue]="c.id">{{ c.name }}</option>
+          }
+        </select>
+        <app-field-error [control]="form.controls.categoryId" />
+      } @else {
+        <p class="form-banner">
+          Primero crea una categoría.
+          <a
+            routerLink="/catalogo"
+            cdkFocusInitial
+            [queryParams]="{ tab: 'categorias' }"
+            class="font-bold underline"
+            (click)="ref.close()"
+            >Ir a categorías</a
+          >
+        </p>
+      }
+    </div>
+    <div>
+      <label class="field-label" for="service-name">Nombre *</label>
+      <input
+        id="service-name"
+        class="field-input"
+        formControlName="name"
+        maxlength="120"
+        autocomplete="off"
+      />
+      <app-field-error [control]="form.controls.name" />
+    </div>
+    <div>
+      <label class="field-label" for="service-description">Descripción</label>
+      <textarea
+        id="service-description"
+        rows="2"
+        class="field-input"
+        formControlName="description"
+        maxlength="500"
+      ></textarea>
+      <p class="field-hint text-right">{{ form.controls.description.value.length }}/500</p>
+      <app-field-error [control]="form.controls.description" />
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="field-label" for="service-duration">Duración (min) *</label>
+        <input
+          id="service-duration"
+          type="number"
+          min="1"
+          step="1"
+          class="field-input"
+          formControlName="durationMinutes"
+        />
+        <app-field-error [control]="form.controls.durationMinutes" />
+      </div>
+      <div>
+        <label class="field-label" for="service-price">Precio *</label>
+        <div class="relative">
+          <span class="money-prefix">{{ symbol() }}</span>
+          <input
+            id="service-price"
+            class="field-input pl-12"
+            inputmode="decimal"
+            autocomplete="off"
+            formControlName="price"
+          />
+        </div>
+        <app-field-error [control]="form.controls.price" />
+      </div>
+    </div>
+    <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-600">
+      <input type="checkbox" class="h-4 w-4 accent-primary" formControlName="active" /> Activo
+    </label>
+    @if (service) {
+      <div>
+        <span class="field-label">Imagen</span>
+        @if (service.imageUrl) {
+          <img
+            [src]="service.imageUrl"
+            alt="Imagen actual del servicio"
+            class="h-20 w-20 rounded-xl object-cover"
+          />
+        }
+        <p class="field-hint">La imagen no se puede cambiar al editar.</p>
+      </div>
+    } @else {
+      <app-image-field [(file)]="image" [error]="imageError()" />
+    }
+  </form>
+  <div dialogFooter class="contents">
+    <button type="button" class="btn btn-secondary" (click)="ref.close()">Cancelar</button>
+    <button
+      type="submit"
+      form="service-form"
+      class="btn btn-primary"
+      [disabled]="saving() || !categories.length"
+    >
+      {{ saving() ? 'Guardando…' : 'Guardar servicio' }}
+    </button>
+  </div>
+</app-dialog-frame>

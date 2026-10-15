@@ -1,0 +1,103 @@
+<app-dialog-frame [title]="product ? 'Editar producto' : 'Nuevo producto'" (closed)="ref.close()">
+  <form id="product-form" [formGroup]="form" (ngSubmit)="save()" class="space-y-4" novalidate>
+    @if (error()) {
+      <p class="form-banner" role="alert">{{ error() }}</p>
+    }
+    <div>
+      <label class="field-label" for="product-name">Nombre *</label>
+      <input
+        id="product-name"
+        cdkFocusInitial
+        class="field-input"
+        formControlName="name"
+        maxlength="120"
+        autocomplete="off"
+      />
+      <app-field-error [control]="form.controls.name" />
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="field-label" for="product-sku">SKU</label>
+        <input
+          id="product-sku"
+          class="field-input"
+          formControlName="sku"
+          maxlength="50"
+          autocomplete="off"
+        />
+        <app-field-error [control]="form.controls.sku" />
+      </div>
+      <div>
+        <label class="field-label" for="product-price">Precio *</label>
+        <div class="relative">
+          <span class="money-prefix">{{ symbol() }}</span>
+          <input
+            id="product-price"
+            class="field-input pl-12"
+            inputmode="decimal"
+            autocomplete="off"
+            formControlName="price"
+          />
+        </div>
+        <app-field-error [control]="form.controls.price" />
+      </div>
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      @if (!product) {
+        <div>
+          <label class="field-label" for="product-stock">Stock inicial *</label>
+          <input
+            id="product-stock"
+            type="number"
+            min="0"
+            step="1"
+            class="field-input"
+            formControlName="stock"
+          />
+          <app-field-error [control]="form.controls.stock" />
+        </div>
+      }
+      <div>
+        <label class="field-label" for="product-min">Stock mínimo</label>
+        <input
+          id="product-min"
+          type="number"
+          min="0"
+          step="1"
+          class="field-input"
+          formControlName="minStock"
+        />
+        <app-field-error [control]="form.controls.minStock" />
+      </div>
+    </div>
+    @if (product) {
+      <p class="field-hint">
+        Stock actual: {{ product.stock }}. Para cambiar el stock usa «Ajustar stock».
+      </p>
+    }
+    <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-600">
+      <input type="checkbox" class="h-4 w-4 accent-primary" formControlName="active" /> Activo
+    </label>
+    @if (product) {
+      <div>
+        <span class="field-label">Imagen</span>
+        @if (product.imageUrl) {
+          <img
+            [src]="product.imageUrl"
+            alt="Imagen actual del producto"
+            class="h-20 w-20 rounded-xl object-cover"
+          />
+        }
+        <p class="field-hint">La imagen no se puede cambiar al editar.</p>
+      </div>
+    } @else {
+      <app-image-field [(file)]="image" [error]="imageError()" />
+    }
+  </form>
+  <div dialogFooter class="contents">
+    <button type="button" class="btn btn-secondary" (click)="ref.close()">Cancelar</button>
+    <button type="submit" form="product-form" class="btn btn-primary" [disabled]="saving()">
+      {{ saving() ? 'Guardando…' : 'Guardar producto' }}
+    </button>
+  </div>
+</app-dialog-frame>

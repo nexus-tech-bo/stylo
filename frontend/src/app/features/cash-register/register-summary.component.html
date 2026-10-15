@@ -1,0 +1,72 @@
+@let r = register();
+<div class="flex flex-wrap items-center gap-2 text-sm">
+  <app-badge [label]="statusLabels[r.status].label" [tone]="statusLabels[r.status].tone" />
+  <span class="text-gray-500"
+    >Abierta por {{ r.openedBy }} · {{ r.openedAt | date: 'dd/MM/yyyy HH:mm' }}</span
+  >
+  @if (r.closedAt) {
+    <span class="text-gray-500"
+      >· Cerrada por {{ r.closedBy }} · {{ r.closedAt | date: 'dd/MM/yyyy HH:mm' }}</span
+    >
+  }
+</div>
+
+<div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+  <div class="kpi-tile">
+    <p class="kpi-label">Apertura</p>
+    <p class="kpi-value text-xl">{{ r.openingAmount | money }}</p>
+  </div>
+  <div class="kpi-tile">
+    <p class="kpi-label">Ventas</p>
+    <p class="kpi-value text-xl">{{ r.salesCount }}</p>
+  </div>
+  <div class="kpi-tile">
+    <p class="kpi-label">Total vendido</p>
+    <p class="kpi-value text-xl">{{ r.salesTotal | money }}</p>
+  </div>
+  <div class="kpi-tile">
+    <p class="kpi-label">Efectivo esperado</p>
+    <p class="kpi-value text-xl">{{ r.expectedCash | money }}</p>
+  </div>
+</div>
+
+@if (r.byPaymentMethod.length) {
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Método</th>
+        <th class="text-right">Cant.</th>
+        <th class="text-right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (m of r.byPaymentMethod; track m.method) {
+        <tr>
+          <td>{{ paymentLabels[m.method] }}</td>
+          <td class="text-right tabular-nums">{{ m.count }}</td>
+          <td class="text-right tabular-nums">{{ m.total | money }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+}
+
+@if (r.difference !== null) {
+  @let d = differenceLabel(r.difference);
+  <div
+    class="flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl bg-white/50 px-4 py-3 text-sm"
+  >
+    <span
+      >Contado <b class="text-gray-900 tabular-nums">{{ r.countedCash | money }}</b></span
+    >
+    <span class="flex items-center gap-2">
+      Diferencia <b class="text-gray-900 tabular-nums">{{ r.difference | money }}</b>
+      <app-badge [label]="d.label" [tone]="d.tone" />
+    </span>
+  </div>
+}
+@if (r.notes) {
+  <p class="text-sm whitespace-pre-line text-gray-600">
+    <span class="font-semibold">Notas:</span> {{ r.notes }}
+  </p>
+}

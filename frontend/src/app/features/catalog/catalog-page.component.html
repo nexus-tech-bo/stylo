@@ -1,0 +1,310 @@
+<app-page-header
+  title="Catálogo"
+  [subtitle]="isAdmin() ? 'Servicios, productos y categorías' : 'Servicios y productos'"
+>
+  @if (isAdmin()) {
+    <button
+      type="button"
+      class="btn btn-primary"
+      [disabled]="currentTab() === 'servicios' && !categories.hasValue()"
+      (click)="create()"
+    >
+      <app-ui-icon name="plus" class="h-4 w-4" [strokeWidth]="2.4" />
+      {{ createLabels[currentTab()] }}
+    </button>
+  }
+</app-page-header>
+
+<div class="mb-4 flex flex-wrap items-center gap-3">
+  <app-segmented-tabs [items]="tabs()" [selectedId]="currentTab()" (select)="selectTab($event)" />
+  <div class="relative min-w-48 flex-1">
+    <label class="sr-only" for="catalog-search">Buscar en el catálogo</label>
+    <app-ui-icon
+      name="search"
+      class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500"
+    />
+    <input
+      id="catalog-search"
+      type="search"
+      class="field-input pl-10"
+      placeholder="Buscar…"
+      [value]="search()"
+      (input)="search.set($any($event.target).value)"
+    />
+  </div>
+  @if (isAdmin() && currentTab() !== 'categorias') {
+    <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-600">
+      <input
+        type="checkbox"
+        class="h-4 w-4 accent-primary"
+        [checked]="showInactive()"
+        (change)="showInactive.set($any($event.target).checked)"
+      />
+      Mostrar inactivos
+    </label>
+  }
+</div>
+
+<div class="glass-panel flex min-h-0 flex-col rounded-3xl p-4">
+  <div class="min-h-0 flex-1 overflow-auto">
+    @if (tabError()) {
+      <app-empty-state icon="alert" [title]="tabError()">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="reloadTab()">
+          Reintentar
+        </button>
+      </app-empty-state>
+    } @else if (tabLoading()) {
+      <div class="space-y-2">
+        @for (i of [1, 2, 3, 4, 5]; track i) {
+          <div class="skeleton h-14"></div>
+        }
+      </div>
+    } @else {
+      @switch (currentTab()) {
+        @case ('servicios') {
+          @if (!services.value()?.length) {
+            <app-empty-state icon="scissors" title="Aún no hay servicios.">
+              @if (isAdmin()) {
+                <button
+                  type="button"
+                  class="btn btn-secondary btn-sm"
+                  [disabled]="!categories.hasValue()"
+                  (click)="editService(null)"
+                >
+                  Nuevo servicio
+                </button>
+              }
+            </app-empty-state>
+          } @else if (!serviceRows().length) {
+            <app-empty-state icon="search" title="Sin resultados." />
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  <th class="hidden md:table-cell">Categoría</th>
+                  <th class="hidden md:table-cell">Duración</th>
+                  <th class="text-right">Precio</th>
+                  <th>Estado</th>
+                  @if (isAdmin()) {
+                    <th class="text-right">Acciones</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (s of serviceRows(); track s.id) {
+                  <tr [class.opacity-60]="!s.active">
+                    <td>
+                      <div class="flex items-center gap-3">
+                        @if (s.imageUrl) {
+                          <img
+                            [src]="s.imageUrl"
+                            alt=""
+                            class="h-10 w-10 shrink-0 rounded-xl object-cover"
+                          />
+                        } @else {
+                          <span
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-xs font-bold text-primary"
+                            >{{ initials(s.name) }}</span
+                          >
+                        }
+                        <div class="max-w-48 min-w-0 sm:max-w-xs">
+                          <p class="truncate font-bold text-gray-900" [title]="s.name">
+                            {{ s.name }}
+                          </p>
+                          <p class="truncate text-xs text-gray-500 md:hidden">
+                            {{ s.category }} · {{ s.durationMinutes }} min
+                          </p>
+                          @if (s.description) {
+                            <p class="hidden max-w-xs truncate text-xs text-gray-500 md:block">
+                              {{ s.description }}
+                            </p>
+                          }
+                        </div>
+                      </div>
+                    </td>
+                    <td class="hidden md:table-cell">{{ s.category }}</td>
+                    <td class="hidden md:table-cell">{{ s.durationMinutes }} min</td>
+                    <td class="text-right whitespace-nowrap tabular-nums">{{ s.price | money }}</td>
+                    <td>
+                      <app-badge
+                        [label]="activeLabel(s.active).label"
+                        [tone]="activeLabel(s.active).tone"
+                      />
+                    </td>
+                    @if (isAdmin()) {
+                      <td>
+                        <div class="flex justify-end">
+                          <button
+                            type="button"
+                            class="btn-icon"
+                            [attr.aria-label]="'Editar ' + s.name"
+                            [disabled]="!categories.hasValue()"
+                            (click)="editService(s)"
+                          >
+                            <app-ui-icon name="edit" class="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        }
+        @case ('productos') {
+          @if (!products.value()?.length) {
+            <app-empty-state icon="box" title="Aún no hay productos.">
+              @if (isAdmin()) {
+                <button type="button" class="btn btn-secondary btn-sm" (click)="editProduct(null)">
+                  Nuevo producto
+                </button>
+              }
+            </app-empty-state>
+          } @else if (!productRows().length) {
+            <app-empty-state icon="search" title="Sin resultados." />
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th class="hidden md:table-cell">SKU</th>
+                  <th class="text-right">Precio</th>
+                  <th>Stock</th>
+                  <th class="hidden sm:table-cell">Estado</th>
+                  @if (isAdmin()) {
+                    <th class="text-right">Acciones</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (p of productRows(); track p.id) {
+                  <tr [class.opacity-60]="!p.active">
+                    <td>
+                      <div class="flex items-center gap-3">
+                        @if (p.imageUrl) {
+                          <img
+                            [src]="p.imageUrl"
+                            alt=""
+                            class="h-10 w-10 shrink-0 rounded-xl object-cover"
+                          />
+                        } @else {
+                          <span
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-tertiary/10 text-xs font-bold text-tertiary"
+                            >{{ initials(p.name) }}</span
+                          >
+                        }
+                        <div class="max-w-48 min-w-0 sm:max-w-xs">
+                          <p class="truncate font-bold text-gray-900" [title]="p.name">
+                            {{ p.name }}
+                          </p>
+                          <p class="truncate text-xs text-gray-500 md:hidden">
+                            {{ p.sku ? p.sku + ' · ' : '' }}mín {{ p.minStock ?? 0 }}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td class="hidden whitespace-nowrap md:table-cell">{{ p.sku ?? '—' }}</td>
+                    <td class="text-right whitespace-nowrap tabular-nums">{{ p.price | money }}</td>
+                    <td class="whitespace-nowrap">
+                      <span class="tabular-nums">{{ p.stock }}</span>
+                      <span class="hidden text-xs text-gray-500 md:inline">
+                        (mín {{ p.minStock ?? 0 }})</span
+                      >
+                      @if (stockLabel(p); as l) {
+                        <app-badge class="ml-1" [label]="l.label" [tone]="l.tone" [dot]="false" />
+                      }
+                    </td>
+                    <td class="hidden sm:table-cell">
+                      <app-badge
+                        [label]="activeLabel(p.active).label"
+                        [tone]="activeLabel(p.active).tone"
+                      />
+                    </td>
+                    @if (isAdmin()) {
+                      <td>
+                        <div class="flex justify-end gap-1">
+                          <button
+                            type="button"
+                            class="btn-icon"
+                            [attr.aria-label]="'Ajustar stock de ' + p.name"
+                            (click)="adjustStock(p)"
+                          >
+                            <app-ui-icon name="box" class="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            class="btn-icon"
+                            [attr.aria-label]="'Editar ' + p.name"
+                            (click)="editProduct(p)"
+                          >
+                            <app-ui-icon name="edit" class="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        }
+        @case ('categorias') {
+          @if (!categories.value()?.length) {
+            <app-empty-state icon="scissors" title="Aún no hay categorías.">
+              <button type="button" class="btn btn-secondary btn-sm" (click)="editCategory(null)">
+                Nueva categoría
+              </button>
+            </app-empty-state>
+          } @else if (!categoryRows().length) {
+            <app-empty-state icon="search" title="Sin resultados." />
+          } @else {
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Categoría</th>
+                  <th>Estado</th>
+                  <th class="text-right">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (c of categoryRows(); track c.id) {
+                  <tr [class.opacity-60]="!c.active">
+                    <td class="font-bold text-gray-900">{{ c.name }}</td>
+                    <td>
+                      <app-badge
+                        [label]="activeLabel(c.active, true).label"
+                        [tone]="activeLabel(c.active, true).tone"
+                      />
+                    </td>
+                    <td>
+                      <div class="flex justify-end gap-1">
+                        <button
+                          type="button"
+                          class="btn-icon"
+                          [attr.aria-label]="'Editar ' + c.name"
+                          (click)="editCategory(c)"
+                        >
+                          <app-ui-icon name="edit" class="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-icon hover:!text-red-600"
+                          [attr.aria-label]="'Eliminar ' + c.name"
+                          (click)="deleteCategory(c)"
+                        >
+                          <app-ui-icon name="trash" class="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        }
+      }
+    }
+  </div>
+</div>

@@ -1,0 +1,43 @@
+<app-dialog-frame
+  title="Abrir caja"
+  subtitle="Registra el efectivo con el que empiezas el turno."
+  (closed)="ref.close()"
+>
+  <form id="open-register-form" [formGroup]="form" (ngSubmit)="save()" class="space-y-4" novalidate>
+    @if (error()) {
+      <p class="form-banner" role="alert">{{ error() }}</p>
+    }
+    <div>
+      <label class="field-label" for="opening-amount">Monto inicial en efectivo *</label>
+      <div class="relative">
+        <span class="money-prefix">{{ symbol() }}</span>
+        <input
+          id="opening-amount"
+          class="field-input pl-12"
+          inputmode="decimal"
+          autocomplete="off"
+          formControlName="openingAmount"
+          cdkFocusInitial
+        />
+      </div>
+      <app-field-error [control]="form.controls.openingAmount" />
+    </div>
+    <div>
+      <label class="field-label" for="opening-notes">Notas</label>
+      <textarea
+        id="opening-notes"
+        rows="2"
+        class="field-input"
+        formControlName="notes"
+        maxlength="500"
+      ></textarea>
+      <app-field-error [control]="form.controls.notes" />
+    </div>
+  </form>
+  <div dialogFooter class="contents">
+    <button type="button" class="btn btn-secondary" (click)="ref.close()">Cancelar</button>
+    <button type="submit" form="open-register-form" class="btn btn-primary" [disabled]="saving()">
+      {{ saving() ? 'Abriendo…' : 'Abrir caja' }}
+    </button>
+  </div>
+</app-dialog-frame>

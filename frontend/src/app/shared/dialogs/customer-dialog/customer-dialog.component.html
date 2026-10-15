@@ -1,0 +1,74 @@
+<app-dialog-frame [title]="customer ? 'Editar cliente' : 'Nuevo cliente'" (closed)="ref.close()">
+  <form id="customer-form" [formGroup]="form" (ngSubmit)="save()" class="space-y-4" novalidate>
+    @if (error()) {
+      <p class="form-banner" role="alert">{{ error() }}</p>
+    }
+    <div>
+      <label class="field-label" for="customer-name">Nombre *</label>
+      <input
+        id="customer-name"
+        cdkFocusInitial
+        class="field-input"
+        formControlName="name"
+        autocomplete="off"
+        maxlength="120"
+      />
+      <app-field-error [control]="form.controls.name" />
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="field-label" for="customer-phone">Teléfono</label>
+        <input
+          id="customer-phone"
+          type="tel"
+          class="field-input"
+          formControlName="phone"
+          autocomplete="off"
+          maxlength="30"
+        />
+        <app-field-error [control]="form.controls.phone" />
+      </div>
+      <div>
+        <label class="field-label" for="customer-email">Email</label>
+        <input
+          id="customer-email"
+          type="email"
+          class="field-input"
+          formControlName="email"
+          autocomplete="off"
+          maxlength="120"
+        />
+        <app-field-error [control]="form.controls.email" />
+      </div>
+    </div>
+    <div>
+      <label class="field-label" for="customer-tax">NIT/CI</label>
+      <input
+        id="customer-tax"
+        class="field-input"
+        formControlName="taxId"
+        autocomplete="off"
+        maxlength="30"
+      />
+      <app-field-error [control]="form.controls.taxId" />
+    </div>
+    <div>
+      <label class="field-label" for="customer-notes">Notas</label>
+      <textarea
+        id="customer-notes"
+        rows="3"
+        class="field-input"
+        formControlName="notes"
+        maxlength="500"
+      ></textarea>
+      <p class="field-hint text-right">{{ form.controls.notes.value.length }}/500</p>
+      <app-field-error [control]="form.controls.notes" />
+    </div>
+  </form>
+  <div dialogFooter class="contents">
+    <button type="button" class="btn btn-secondary" (click)="ref.close()">Cancelar</button>
+    <button type="submit" form="customer-form" class="btn btn-primary" [disabled]="saving()">
+      {{ saving() ? 'Guardando…' : 'Guardar cliente' }}
+    </button>
+  </div>
+</app-dialog-frame>

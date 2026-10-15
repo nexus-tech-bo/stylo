@@ -1,0 +1,135 @@
+<app-dialog-frame
+  title="Nuevo negocio"
+  subtitle="Crea el salón y su primer administrador."
+  (closed)="ref.close()"
+>
+  <form id="business-form" [formGroup]="form" (ngSubmit)="save()" class="space-y-5" novalidate>
+    @if (error()) {
+      <p class="form-banner" role="alert">{{ error() }}</p>
+    }
+    <fieldset class="space-y-4">
+      <legend class="mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase">Negocio</legend>
+      <div>
+        <label class="field-label" for="biz-new-name">Nombre *</label>
+        <input
+          id="biz-new-name"
+          cdkFocusInitial
+          class="field-input"
+          formControlName="name"
+          maxlength="120"
+          autocomplete="off"
+          (input)="onNameInput()"
+        />
+        <app-field-error [control]="form.controls.name" />
+      </div>
+      <div>
+        <label class="field-label" for="biz-new-code">Código *</label>
+        <input
+          id="biz-new-code"
+          class="field-input"
+          formControlName="code"
+          maxlength="40"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+          (input)="onCodeInput()"
+        />
+        <p class="field-hint">
+          Con este código inicia sesión el equipo. Minúsculas, números y guiones (3–40).
+        </p>
+        <app-field-error [control]="form.controls.code" />
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class="field-label" for="biz-new-tax">NIT</label>
+          <input
+            id="biz-new-tax"
+            class="field-input"
+            formControlName="taxId"
+            maxlength="30"
+            autocomplete="off"
+          />
+          <app-field-error [control]="form.controls.taxId" />
+        </div>
+        <div>
+          <label class="field-label" for="biz-new-phone">Teléfono</label>
+          <input
+            id="biz-new-phone"
+            type="tel"
+            class="field-input"
+            formControlName="phone"
+            maxlength="30"
+            autocomplete="off"
+          />
+          <app-field-error [control]="form.controls.phone" />
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset class="space-y-4">
+      <legend class="mb-2 text-xs font-bold tracking-wide text-gray-500 uppercase">
+        Administrador
+      </legend>
+      <div>
+        <label class="field-label" for="biz-admin-name">Nombre *</label>
+        <input
+          id="biz-admin-name"
+          class="field-input"
+          formControlName="adminName"
+          maxlength="120"
+          autocomplete="off"
+        />
+        <app-field-error [control]="form.controls.adminName" />
+      </div>
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label class="field-label" for="biz-admin-user">Usuario *</label>
+          <input
+            id="biz-admin-user"
+            class="field-input"
+            formControlName="adminUsername"
+            maxlength="50"
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+          />
+          <app-field-error [control]="form.controls.adminUsername" />
+        </div>
+        <div>
+          <label class="field-label" for="biz-admin-pass">Contraseña *</label>
+          <div class="relative">
+            <input
+              id="biz-admin-pass"
+              class="field-input pr-12"
+              [type]="visible() ? 'text' : 'password'"
+              formControlName="adminPassword"
+              maxlength="72"
+              autocomplete="new-password"
+            />
+            <button
+              type="button"
+              class="btn-icon absolute top-1/2 right-1.5 -translate-y-1/2"
+              aria-label="Mostrar contraseña"
+              [attr.aria-pressed]="visible()"
+              (click)="visible.set(!visible())"
+            >
+              <app-ui-icon [name]="visible() ? 'eyeOff' : 'eye'" class="h-4 w-4" />
+            </button>
+          </div>
+          <app-field-error [control]="form.controls.adminPassword" />
+        </div>
+      </div>
+    </fieldset>
+
+    <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-600">
+      <input type="checkbox" class="h-4 w-4 accent-primary" formControlName="baseCatalog" /> Cargar
+      catálogo base de ejemplo
+    </label>
+  </form>
+  <div dialogFooter class="contents">
+    <button type="button" class="btn btn-secondary" (click)="ref.close()">Cancelar</button>
+    <button type="submit" form="business-form" class="btn btn-primary" [disabled]="saving()">
+      {{ saving() ? 'Guardando…' : 'Crear negocio' }}
+    </button>
+  </div>
+</app-dialog-frame>

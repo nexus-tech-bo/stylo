@@ -1,0 +1,160 @@
+<app-page-header
+  title="Inicio"
+  [subtitle]="'Resumen de hoy · ' + (now | date: 'EEEE d \'de\' MMMM')"
+>
+  <a routerLink="/venta" class="btn btn-primary"
+    ><app-ui-icon name="plus" class="h-4 w-4" [strokeWidth]="2.4" /> Nueva venta</a
+  >
+</app-page-header>
+
+<div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+  <!-- Register -->
+  <section class="glass-panel rounded-3xl p-5" aria-labelledby="dash-register">
+    <h2 id="dash-register" class="section-title">Caja</h2>
+    @if (register.error()) {
+      <app-empty-state icon="alert" title="No se pudo cargar la caja">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="register.reload()">
+          Reintentar
+        </button>
+      </app-empty-state>
+    } @else if (!register.hasValue()) {
+      <div class="skeleton h-28"></div>
+    } @else if (register.value(); as r) {
+      <div class="space-y-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <app-badge label="Abierta" tone="secondary" />
+          <span class="text-sm text-gray-500"
+            >desde {{ r.openedAt | date: 'HH:mm' }} por {{ r.openedBy }}</span
+          >
+        </div>
+        <p class="text-sm">
+          Ventas <b class="text-gray-900">{{ r.salesCount }}</b> ·
+          <b class="text-gray-900 tabular-nums">{{ r.salesTotal | money }}</b>
+        </p>
+        <p class="text-sm">
+          Efectivo esperado <b class="text-gray-900 tabular-nums">{{ r.expectedCash | money }}</b>
+        </p>
+        <div class="flex justify-end">
+          <a routerLink="/caja" class="btn btn-ghost btn-sm"
+            >Ir a caja <app-ui-icon name="chevronRight" class="h-4 w-4"
+          /></a>
+        </div>
+      </div>
+    } @else {
+      <app-empty-state
+        icon="lock"
+        title="La caja está cerrada"
+        message="Ábrela para registrar ventas."
+      >
+        <button type="button" class="btn btn-secondary" (click)="openRegister()">Abrir caja</button>
+      </app-empty-state>
+    }
+  </section>
+
+  <!-- KPIs -->
+  <section aria-label="Indicadores de hoy">
+    @if (summary.error()) {
+      <div class="glass-panel rounded-3xl p-5">
+        <app-empty-state icon="alert" title="No se pudo cargar el resumen">
+          <button type="button" class="btn btn-secondary btn-sm" (click)="summary.reload()">
+            Reintentar
+          </button>
+        </app-empty-state>
+      </div>
+    } @else if (!summary.hasValue()) {
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="skeleton h-24"></div>
+        }
+      </div>
+    } @else {
+      @let s = summary.value();
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div class="kpi-tile">
+          <p class="kpi-label">Ventas</p>
+          <p class="kpi-value">{{ s.salesCount }}</p>
+        </div>
+        <div class="kpi-tile">
+          <p class="kpi-label">Total</p>
+          <p class="kpi-value text-xl">{{ s.salesTotal | money }}</p>
+        </div>
+        <div class="kpi-tile">
+          <p class="kpi-label">Ticket promedio</p>
+          <p class="kpi-value text-xl">{{ s.averageTicket | money }}</p>
+        </div>
+        <div class="kpi-tile">
+          <p class="kpi-label">Anuladas</p>
+          <p class="kpi-value">{{ s.voidedSales }}</p>
+        </div>
+      </div>
+    }
+  </section>
+
+  <!-- Payment methods -->
+  <section class="glass-panel rounded-3xl p-5" aria-labelledby="dash-methods">
+    <h2 id="dash-methods" class="section-title">Por método de pago</h2>
+    @if (summary.error()) {
+      <p class="text-sm text-gray-500">Sin datos.</p>
+    } @else if (!summary.hasValue()) {
+      <div class="skeleton h-24"></div>
+    } @else if (!summary.value().byPaymentMethod.length || summary.value().salesCount === 0) {
+      <p class="text-sm text-gray-500">Aún no hay ventas hoy.</p>
+    } @else {
+      <ul class="space-y-3">
+        @for (m of summary.value().byPaymentMethod; track m.method) {
+          <li>
+            <div class="mb-1 flex justify-between gap-2 text-sm">
+              <span class="font-semibold text-gray-700">{{ paymentLabels[m.method] }}</span>
+              <span class="tabular-nums">{{ m.total | money }} ({{ m.count }})</span>
+            </div>
+            <div class="h-2 rounded-full bg-white/60">
+              <div
+                class="h-2 rounded-full bg-primary/70"
+                [style.width.%]="(m.total / maxMethodTotal()) * 100"
+              ></div>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+
+  <!-- Low stock -->
+  <section class="glass-panel rounded-3xl p-5" aria-labelledby="dash-stock">
+    <h2 id="dash-stock" class="section-title">Stock bajo</h2>
+    @if (lowStock.error()) {
+      <app-empty-state icon="alert" title="No se pudo cargar el stock">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="lowStock.reload()">
+          Reintentar
+        </button>
+      </app-empty-state>
+    } @else if (!lowStock.hasValue()) {
+      <div class="skeleton h-24"></div>
+    } @else if (!lowStock.value().length) {
+      <p class="text-sm text-gray-500">Todo el inventario está sobre el mínimo.</p>
+    } @else {
+      <ul class="divide-y divide-gray-900/[0.05]">
+        @for (p of lowStock.value().slice(0, 6); track p.id) {
+          <li class="flex items-center justify-between gap-3 py-2 text-sm">
+            <span class="min-w-0 truncate font-semibold text-gray-800" [title]="p.name">{{
+              p.name
+            }}</span>
+            <span class="flex shrink-0 items-center gap-2">
+              <span class="tabular-nums text-gray-500"
+                >{{ p.stock }} / mín {{ p.minStock ?? 0 }}</span
+              >
+              @if (stockLabel(p); as l) {
+                <app-badge [label]="l.label" [tone]="l.tone" />
+              }
+            </span>
+          </li>
+        }
+      </ul>
+      <div class="mt-2 flex justify-end">
+        <a routerLink="/catalogo" [queryParams]="{ tab: 'productos' }" class="btn btn-ghost btn-sm"
+          >Ver productos</a
+        >
+      </div>
+    }
+  </section>
+</div>

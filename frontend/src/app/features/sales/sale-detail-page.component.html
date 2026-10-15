@@ -1,0 +1,159 @@
+<a routerLink="/ventas" class="btn btn-ghost btn-sm mb-3 self-start"
+  ><app-ui-icon name="arrowLeft" class="h-4 w-4" /> Ventas</a
+>
+
+@if (sale.error()) {
+  @if (notFound()) {
+    <app-empty-state icon="receipt" title="Esta venta no existe.">
+      <a routerLink="/ventas" class="btn btn-secondary btn-sm">Volver a ventas</a>
+    </app-empty-state>
+  } @else {
+    <app-empty-state icon="alert" title="No se pudo cargar la venta.">
+      <button type="button" class="btn btn-secondary btn-sm" (click)="sale.reload()">
+        Reintentar
+      </button>
+    </app-empty-state>
+  }
+} @else if (sale.value(); as s) {
+  <header class="mb-6 flex flex-wrap items-start justify-between gap-4">
+    <div>
+      <div class="flex flex-wrap items-center gap-3">
+        <h1 class="text-[28px] font-extrabold tracking-tight text-gray-900 lg:text-[34px]">
+          Venta #{{ s.id }}
+        </h1>
+        <app-badge [label]="statusLabels[s.status].label" [tone]="statusLabels[s.status].tone" />
+      </div>
+      <p class="text-[15px] font-medium text-gray-500">
+        {{ s.date | date: 'dd/MM/yyyy HH:mm' }} · Cajero {{ s.cashier }} · Caja #{{
+          s.cashRegisterId
+        }}
+      </p>
+    </div>
+    @if (isAdmin() && s.status === 'COMPLETED') {
+      <div class="text-right">
+        <button type="button" class="btn btn-danger" [disabled]="!canVoid()" (click)="openVoid(s)">
+          Anular venta
+        </button>
+        @if (register.hasValue() && !canVoid()) {
+          <p class="field-hint max-w-60">Solo se pueden anular ventas de la caja abierta.</p>
+        }
+      </div>
+    }
+  </header>
+
+  <div class="grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div class="order-2 space-y-4 lg:order-1">
+      <section class="glass-panel rounded-3xl p-4" aria-labelledby="sale-items">
+        <h2 id="sale-items" class="section-title px-2">Ítems</h2>
+        <table class="data-table hidden sm:table">
+          <thead>
+            <tr>
+              <th>Descripción</th>
+              <th>Estilista</th>
+              <th class="text-right">Cant.</th>
+              <th class="text-right">P. unit.</th>
+              <th class="text-right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of s.items; track item.id) {
+              <tr>
+                <td class="font-semibold text-gray-900">{{ item.description }}</td>
+                <td>{{ item.stylist ?? '—' }}</td>
+                <td class="text-right tabular-nums">{{ item.quantity }}</td>
+                <td class="text-right tabular-nums">{{ item.unitPrice | money: false }}</td>
+                <td class="text-right tabular-nums">{{ item.subtotal | money: false }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <ul class="divide-y divide-gray-900/[0.06] sm:hidden">
+          @for (item of s.items; track item.id) {
+            <li class="flex justify-between gap-3 px-2 py-3 text-sm">
+              <div class="min-w-0">
+                <p class="font-semibold text-gray-900">{{ item.description }}</p>
+                <p class="text-xs text-gray-500">
+                  {{ item.quantity }} × {{ item.unitPrice | money
+                  }}{{ item.stylist ? ' · ' + item.stylist : '' }}
+                </p>
+              </div>
+              <span class="shrink-0 font-bold tabular-nums">{{ item.subtotal | money }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+
+      @if (s.status === 'VOIDED') {
+        <section class="rounded-3xl bg-red-50 p-5 text-sm text-red-700" aria-label="Anulación">
+          <p class="font-bold">
+            Anulada por {{ s.voidedBy }} el {{ s.voidedAt | date: 'dd/MM/yyyy HH:mm' }}
+          </p>
+          <p class="mt-1">Motivo: {{ s.voidReason }}</p>
+        </section>
+      }
+    </div>
+
+    <section class="glass-panel order-1 rounded-3xl p-5 lg:order-2" aria-labelledby="sale-summary">
+      <h2 id="sale-summary" class="section-title">Resumen</h2>
+      <dl class="space-y-2 text-sm">
+        <div class="flex justify-between gap-3">
+          <dt class="text-gray-500">Cliente</dt>
+          <dd class="text-right font-semibold text-gray-900">
+            {{ s.customer ?? 'Consumidor final' }}
+          </dd>
+        </div>
+        @if (s.customerTaxId) {
+          <div class="flex justify-between gap-3">
+            <dt class="text-gray-500">NIT/CI</dt>
+            <dd class="text-right">{{ s.customerTaxId }}</dd>
+          </div>
+        }
+        <div class="flex justify-between gap-3">
+          <dt class="text-gray-500">Método</dt>
+          <dd class="text-right">{{ paymentLabels[s.paymentMethod] }}</dd>
+        </div>
+        <div class="flex justify-between gap-3 border-t border-gray-900/[0.06] pt-2">
+          <dt>Subtotal</dt>
+          <dd class="tabular-nums">{{ s.subtotal | money }}</dd>
+        </div>
+        @if (s.discount) {
+          <div class="flex justify-between gap-3">
+            <dt>Descuento</dt>
+            <dd class="tabular-nums">−{{ s.discount | money }}</dd>
+          </div>
+        }
+        <div class="flex justify-between gap-3 text-base font-extrabold text-gray-900">
+          <dt>TOTAL</dt>
+          <dd class="tabular-nums" [class.line-through]="s.status === 'VOIDED'">
+            {{ s.total | money }}
+          </dd>
+        </div>
+        <div class="flex justify-between gap-3 text-xs text-gray-500">
+          <dt>IVA incluido</dt>
+          <dd class="tabular-nums">{{ s.tax | money }}</dd>
+        </div>
+        @if (s.amountReceived !== null) {
+          <div class="flex justify-between gap-3 border-t border-gray-900/[0.06] pt-2">
+            <dt>Recibido</dt>
+            <dd class="tabular-nums">{{ s.amountReceived | money }}</dd>
+          </div>
+          <div class="flex justify-between gap-3">
+            <dt>Cambio</dt>
+            <dd class="tabular-nums">{{ s.change | money }}</dd>
+          </div>
+        }
+        @if (s.notes) {
+          <div class="border-t border-gray-900/[0.06] pt-2">
+            <dt class="text-gray-500">Notas</dt>
+            <dd class="mt-1 whitespace-pre-line">{{ s.notes }}</dd>
+          </div>
+        }
+      </dl>
+    </section>
+  </div>
+} @else {
+  <div class="grid gap-4 lg:grid-cols-3">
+    <div class="skeleton h-64 lg:col-span-2"></div>
+    <div class="skeleton h-64"></div>
+  </div>
+}
