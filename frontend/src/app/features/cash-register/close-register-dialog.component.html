@@ -1,0 +1,68 @@
+<app-dialog-frame
+  title="Cerrar caja"
+  subtitle="Cuenta el efectivo de la caja y regístralo."
+  (closed)="ref.close()"
+>
+  <form
+    id="close-register-form"
+    [formGroup]="form"
+    (ngSubmit)="save()"
+    class="space-y-4"
+    novalidate
+  >
+    @if (error()) {
+      <p class="form-banner" role="alert">{{ error() }}</p>
+    }
+    <div class="flex items-center justify-between rounded-2xl bg-white/50 px-4 py-3 text-sm">
+      <span>Efectivo esperado</span>
+      <b class="text-gray-900 tabular-nums">{{ register.expectedCash | money }}</b>
+    </div>
+    <div>
+      <label class="field-label" for="counted-cash">Efectivo contado *</label>
+      <div class="relative">
+        <span class="money-prefix">{{ symbol() }}</span>
+        <input
+          id="counted-cash"
+          class="field-input pl-12"
+          inputmode="decimal"
+          autocomplete="off"
+          formControlName="countedCash"
+          cdkFocusInitial
+        />
+      </div>
+      <app-field-error [control]="form.controls.countedCash" />
+    </div>
+    @if (difference(); as d) {
+      <div
+        class="flex items-center justify-between rounded-2xl bg-white/50 px-4 py-3 text-sm"
+        aria-live="polite"
+      >
+        <span>Diferencia</span>
+        <span class="flex items-center gap-2">
+          <b class="text-gray-900 tabular-nums">{{ d.value | money }}</b>
+          <app-badge [label]="d.label.label" [tone]="d.label.tone" />
+        </span>
+      </div>
+    }
+    <div>
+      <label class="field-label" for="close-notes">Notas</label>
+      <textarea
+        id="close-notes"
+        rows="2"
+        class="field-input"
+        formControlName="notes"
+        maxlength="500"
+      ></textarea>
+      @if (difference()?.value) {
+        <p class="field-hint">Explica la diferencia.</p>
+      }
+      <app-field-error [control]="form.controls.notes" />
+    </div>
+  </form>
+  <div dialogFooter class="contents">
+    <button type="button" class="btn btn-secondary" (click)="ref.close()">Cancelar</button>
+    <button type="submit" form="close-register-form" class="btn btn-primary" [disabled]="saving()">
+      {{ saving() ? 'Cerrando…' : 'Cerrar caja' }}
+    </button>
+  </div>
+</app-dialog-frame>

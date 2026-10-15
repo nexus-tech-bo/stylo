@@ -1,0 +1,92 @@
+<div class="flex items-center gap-1">
+  <button
+    #trigger
+    type="button"
+    [id]="id + '-trigger'"
+    class="field-input flex min-w-0 flex-1 cursor-pointer items-center justify-between gap-2 text-left"
+    aria-haspopup="listbox"
+    [attr.aria-expanded]="open()"
+    (click)="toggle()"
+  >
+    <span class="truncate" [class.text-gray-500]="!customer()">{{
+      customer()?.name ?? 'Consumidor final'
+    }}</span>
+    <app-ui-icon
+      name="chevronDown"
+      class="h-4 w-4 text-gray-500 transition-transform"
+      [class.rotate-180]="open()"
+    />
+  </button>
+  @if (customer(); as selected) {
+    <button
+      type="button"
+      class="btn-icon"
+      [attr.aria-label]="'Quitar cliente ' + selected.name"
+      (click)="choose(null)"
+    >
+      <app-ui-icon name="close" class="h-4 w-4" />
+    </button>
+  }
+</div>
+
+@if (open()) {
+  <div class="fixed inset-0 z-10" (click)="close()"></div>
+  <div class="glass-modal absolute z-20 mt-1.5 w-full overflow-hidden rounded-2xl p-1.5">
+    <label class="sr-only" [for]="id + '-search'">Buscar cliente</label>
+    <input
+      [id]="id + '-search'"
+      class="field-input mb-1.5 py-2"
+      placeholder="Buscar por nombre, teléfono o NIT…"
+      autocomplete="off"
+      role="combobox"
+      aria-autocomplete="list"
+      aria-expanded="true"
+      [attr.aria-controls]="id + '-list'"
+      [attr.aria-activedescendant]="id + '-opt-' + active()"
+      [value]="query()"
+      (input)="onSearch($any($event.target).value)"
+      (keydown)="onKeydown($event)"
+      #search
+    />
+    <ul [id]="id + '-list'" role="listbox" aria-label="Clientes" class="max-h-60 overflow-y-auto">
+      @if (results.error()) {
+        <li class="px-3 py-2 text-sm text-red-600">No se pudo buscar clientes.</li>
+      } @else if (results.isLoading() && !options().length) {
+        <li class="px-3 py-2 text-sm text-gray-500">Buscando…</li>
+      } @else if (!options().length) {
+        <li class="px-3 py-2 text-sm text-gray-500">Sin resultados.</li>
+      }
+      @for (c of options(); track c.id; let i = $index) {
+        <li
+          [id]="id + '-opt-' + i"
+          role="option"
+          class="cursor-pointer rounded-xl px-3 py-2 text-sm font-medium text-gray-700 hover:bg-white/80"
+          [attr.aria-selected]="active() === i"
+          [class.bg-white]="active() === i"
+          (click)="choose(c)"
+        >
+          <span
+            class="block truncate font-semibold"
+            [class.text-primary]="customer()?.id === c.id"
+            >{{ c.name }}</span
+          >
+          @if (c.phone || c.taxId) {
+            <span class="block truncate text-xs text-gray-500"
+              >{{ c.phone }} {{ c.taxId ? '· ' + c.taxId : '' }}</span
+            >
+          }
+        </li>
+      }
+      <li
+        [id]="id + '-opt-' + options().length"
+        role="option"
+        class="flex cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-primary hover:bg-white/80"
+        [attr.aria-selected]="active() === options().length"
+        [class.bg-white]="active() === options().length"
+        (click)="createNew()"
+      >
+        <app-ui-icon name="plus" class="h-4 w-4" [strokeWidth]="2.4" /> Nuevo cliente
+      </li>
+    </ul>
+  </div>
+}

@@ -1,0 +1,424 @@
+<app-page-header title="Nueva venta">
+  @if (register.hasValue() && register.value(); as r) {
+    <app-badge [label]="'Caja abierta · ' + r.openedBy" tone="secondary" />
+  }
+</app-page-header>
+
+@if (register.error()) {
+  <app-empty-state icon="alert" title="No se pudo verificar la caja">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="register.reload()">
+      Reintentar
+    </button>
+  </app-empty-state>
+} @else if (!register.hasValue()) {
+  <div class="grid gap-4 lg:grid-cols-5">
+    <div class="skeleton h-96 lg:col-span-3"></div>
+    <div class="skeleton h-96 lg:col-span-2"></div>
+  </div>
+} @else if (!register.value()) {
+  <div class="flex flex-1 items-center justify-center">
+    <app-empty-state
+      class="glass-panel w-full max-w-md rounded-3xl"
+      icon="lock"
+      title="La caja está cerrada"
+      message="Abre la caja para empezar a registrar ventas."
+    >
+      <button type="button" class="btn btn-primary" (click)="openRegister()">Abrir caja</button>
+    </app-empty-state>
+  </div>
+} @else {
+  <div class="grid items-start gap-4 pb-24 lg:grid-cols-5 lg:pb-0">
+    <!-- Catalog -->
+    <section class="glass-panel rounded-3xl p-4 lg:col-span-3" aria-label="Catálogo">
+      <div class="mb-3 flex flex-wrap items-center gap-3">
+        <app-segmented-tabs [items]="tabs" [selectedId]="tab()" (select)="selectTab($event)" />
+        <div class="relative min-w-48 flex-1">
+          <label class="sr-only" for="pos-search">Buscar en el catálogo</label>
+          <app-ui-icon
+            name="search"
+            class="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-gray-500"
+          />
+          <input
+            id="pos-search"
+            type="search"
+            class="field-input pl-10"
+            placeholder="Buscar…"
+            [value]="search()"
+            (input)="search.set($any($event.target).value)"
+          />
+        </div>
+      </div>
+      @if (tab() === 'SERVICE' && activeCategories().length) {
+        <div class="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Filtrar por categoría">
+          <button
+            type="button"
+            class="pill"
+            [attr.aria-pressed]="categoryId() === null"
+            (click)="categoryId.set(null)"
+          >
+            Todas
+          </button>
+          @for (c of activeCategories(); track c.id) {
+            <button
+              type="button"
+              class="pill"
+              [attr.aria-pressed]="categoryId() === c.id"
+              (click)="categoryId.set(c.id)"
+            >
+              {{ c.name }}
+            </button>
+          }
+        </div>
+      }
+
+      @if (catalogError()) {
+        <app-empty-state icon="alert" title="No se pudo cargar el catálogo">
+          <button type="button" class="btn btn-secondary btn-sm" (click)="reloadCatalog()">
+            Reintentar
+          </button>
+        </app-empty-state>
+      } @else if (catalogLoading()) {
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          @for (i of [1, 2, 3, 4, 5, 6, 7, 8]; track i) {
+            <div class="skeleton h-32"></div>
+          }
+        </div>
+      } @else if (tab() === 'SERVICE') {
+        @if (!services.value()?.length) {
+          <app-empty-state icon="scissors" title="No hay servicios activos.">
+            @if (isAdmin()) {
+              <a routerLink="/catalogo" class="btn btn-secondary btn-sm">Ir al catálogo</a>
+            }
+          </app-empty-state>
+        } @else if (!visibleServices().length) {
+          <app-empty-state
+            icon="search"
+            [title]="
+              search()
+                ? 'Sin resultados para «' + search() + '».'
+                : 'No hay servicios en esta categoría.'
+            "
+          />
+        } @else {
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            @for (s of visibleServices(); track s.id) {
+              <button
+                type="button"
+                class="glass-card cursor-pointer rounded-2xl p-3 text-left focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:outline-none"
+                (click)="addService(s)"
+              >
+                @if (s.imageUrl) {
+                  <img [src]="s.imageUrl" alt="" class="mb-2 h-20 w-full rounded-xl object-cover" />
+                }
+                <span class="block truncate font-bold text-gray-900">{{ s.name }}</span>
+                <span class="block text-xs text-gray-500">{{ s.durationMinutes }} min</span>
+                <span class="mt-1 block font-extrabold text-primary tabular-nums">{{
+                  s.price | money
+                }}</span>
+              </button>
+            }
+          </div>
+        }
+      } @else {
+        @if (!products.value()?.length) {
+          <app-empty-state icon="box" title="No hay productos activos.">
+            @if (isAdmin()) {
+              <a
+                routerLink="/catalogo"
+                [queryParams]="{ tab: 'productos' }"
+                class="btn btn-secondary btn-sm"
+                >Ir al catálogo</a
+              >
+            }
+          </app-empty-state>
+        } @else if (!visibleProducts().length) {
+          <app-empty-state icon="search" [title]="'Sin resultados para «' + search() + '».'" />
+        } @else {
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            @for (p of visibleProducts(); track p.id) {
+              <button
+                type="button"
+                class="glass-card cursor-pointer rounded-2xl p-3 text-left focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                [disabled]="p.stock <= 0"
+                (click)="addProduct(p)"
+              >
+                @if (p.imageUrl) {
+                  <img [src]="p.imageUrl" alt="" class="mb-2 h-20 w-full rounded-xl object-cover" />
+                }
+                <span class="block truncate font-bold text-gray-900">{{ p.name }}</span>
+                @if (p.stock <= 0) {
+                  <app-badge label="Sin stock" tone="danger" [dot]="false" />
+                } @else {
+                  <span class="block text-xs text-gray-500">Stock {{ p.stock }}</span>
+                }
+                <span class="mt-1 block font-extrabold text-primary tabular-nums">{{
+                  p.price | money
+                }}</span>
+              </button>
+            }
+          </div>
+        }
+      }
+    </section>
+
+    <!-- Cart -->
+    <section
+      #cart
+      tabindex="-1"
+      class="glass-panel rounded-3xl p-4 outline-none lg:sticky lg:top-0 lg:col-span-2"
+      aria-labelledby="pos-cart-title"
+    >
+      <h2 id="pos-cart-title" class="section-title">Venta</h2>
+      @if (saleError()) {
+        <p class="form-banner mb-3" role="alert">{{ saleError() }}</p>
+      }
+      <div class="mb-3">
+        <span class="field-label">Cliente</span>
+        <app-customer-picker [(customer)]="customer" />
+      </div>
+
+      @if (!lines().length) {
+        <p
+          class="rounded-2xl border-2 border-dashed border-gray-900/10 px-4 py-6 text-center text-sm text-gray-500"
+        >
+          Selecciona servicios o productos para empezar.
+        </p>
+      } @else {
+        <ul class="divide-y divide-gray-900/[0.06]">
+          @for (line of lines(); track line.key) {
+            <li class="py-3">
+              <div class="flex items-start justify-between gap-2">
+                <span class="min-w-0 font-semibold text-gray-900">{{ line.name }}</span>
+                <span class="flex shrink-0 items-center gap-1">
+                  <span class="font-bold tabular-nums">{{
+                    line.unitPrice * line.quantity | money
+                  }}</span>
+                  <button
+                    type="button"
+                    class="btn-icon h-8 w-8 hover:!text-red-600"
+                    [attr.aria-label]="'Quitar ' + line.name"
+                    (click)="remove(line)"
+                  >
+                    <app-ui-icon name="close" class="h-4 w-4" />
+                  </button>
+                </span>
+              </div>
+              <div class="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                @if (line.type === 'SERVICE') {
+                  <div class="min-w-0 flex-1">
+                    <label class="sr-only" [for]="'stylist-' + line.key"
+                      >Estilista de {{ line.name }}</label
+                    >
+                    <select
+                      [id]="'stylist-' + line.key"
+                      class="field-input py-1.5 text-xs"
+                      (change)="setStylist(line, $any($event.target).value)"
+                    >
+                      <option value="" [selected]="line.stylistId === null">Sin asignar</option>
+                      @for (st of stylistList(); track st.id) {
+                        <option [value]="st.id" [selected]="line.stylistId === st.id">
+                          {{ st.name }}
+                        </option>
+                      }
+                    </select>
+                    @if (stylists.hasValue() && !stylistList().length) {
+                      <p class="field-hint">
+                        No hay estilistas activos.
+                        @if (isAdmin()) {
+                          <a routerLink="/usuarios" class="font-bold text-primary hover:underline"
+                            >Ir a usuarios</a
+                          >
+                        }
+                      </p>
+                    }
+                  </div>
+                } @else {
+                  <span class="text-xs text-gray-500">{{ line.unitPrice | money }} c/u</span>
+                }
+                <div
+                  class="flex items-center gap-1"
+                  role="group"
+                  [attr.aria-label]="'Cantidad de ' + line.name"
+                >
+                  <button
+                    type="button"
+                    class="btn-icon h-8 w-8"
+                    aria-label="Quitar uno"
+                    [disabled]="line.quantity <= 1"
+                    (click)="setQuantity(line, line.quantity - 1)"
+                  >
+                    <app-ui-icon name="minus" class="h-4 w-4" />
+                  </button>
+                  <span class="w-8 text-center font-bold tabular-nums" aria-live="polite">{{
+                    line.quantity
+                  }}</span>
+                  <button
+                    type="button"
+                    class="btn-icon h-8 w-8"
+                    aria-label="Agregar uno"
+                    [disabled]="line.quantity >= maxQuantity(line)"
+                    [attr.title]="
+                      line.maxStock !== null ? 'Stock disponible: ' + line.maxStock : null
+                    "
+                    (click)="setQuantity(line, line.quantity + 1)"
+                  >
+                    <app-ui-icon name="plus" class="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+
+      <dl class="mt-3 space-y-2 border-t border-gray-900/[0.06] pt-3 text-sm">
+        <div class="flex justify-between">
+          <dt>Subtotal</dt>
+          <dd class="tabular-nums">{{ subtotal() | money }}</dd>
+        </div>
+        <div class="flex items-center justify-between gap-3">
+          <dt><label for="pos-discount">Descuento</label></dt>
+          <dd class="w-36">
+            <div class="relative">
+              <input
+                id="pos-discount"
+                class="field-input py-1.5 text-right"
+                inputmode="decimal"
+                autocomplete="off"
+                placeholder="0,00"
+                [class.border-red-300]="discountError()"
+                [attr.aria-invalid]="!!discountError()"
+                [attr.aria-describedby]="discountError() ? 'pos-discount-error' : null"
+                [value]="discountText()"
+                (input)="discountText.set($any($event.target).value)"
+              />
+            </div>
+          </dd>
+        </div>
+        @if (discountError()) {
+          <p id="pos-discount-error" class="field-error text-right">{{ discountError() }}</p>
+        }
+        <div class="flex justify-between text-base font-extrabold text-gray-900">
+          <dt>TOTAL</dt>
+          <dd class="tabular-nums">{{ total() | money }}</dd>
+        </div>
+        @if (taxRate() > 0) {
+          <div class="flex justify-between text-xs text-gray-500">
+            <dt>IVA incluido ({{ taxRate() }} %)</dt>
+            <dd class="tabular-nums">{{ tax() | money }}</dd>
+          </div>
+        }
+      </dl>
+
+      <fieldset class="mt-4">
+        <legend class="field-label">Pago</legend>
+        <div class="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-2 2xl:grid-cols-4">
+          @for (m of paymentMethods; track m) {
+            <label class="choice-card text-xs">
+              <input
+                type="radio"
+                class="sr-only"
+                name="pos-method"
+                [value]="m"
+                [checked]="method() === m"
+                (change)="method.set(m)"
+              />
+              {{ paymentLabels[m] }}
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      @if (method() === 'CASH') {
+        <div class="mt-4">
+          <label class="field-label" for="pos-received">Recibido *</label>
+          <input
+            id="pos-received"
+            class="field-input"
+            inputmode="decimal"
+            autocomplete="off"
+            [class.border-red-300]="receivedError()"
+            [attr.aria-invalid]="!!receivedError()"
+            [value]="receivedText()"
+            (input)="receivedText.set($any($event.target).value)"
+          />
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              class="pill"
+              [disabled]="!lines().length"
+              (click)="setReceived(total())"
+            >
+              Exacto
+            </button>
+            @for (b of bills(); track $index) {
+              <button
+                type="button"
+                class="pill"
+                [disabled]="!lines().length"
+                (click)="setReceived(b)"
+              >
+                {{ b | money }}
+              </button>
+            }
+          </div>
+          @if (receivedError()) {
+            <p class="field-error">{{ receivedError() }}</p>
+          }
+          <div class="mt-3 flex items-baseline justify-between">
+            <span class="text-sm font-semibold">Cambio</span>
+            <span class="text-2xl font-extrabold text-gray-900 tabular-nums" aria-live="polite">{{
+              change() | money
+            }}</span>
+          </div>
+        </div>
+      }
+
+      <div class="mt-3">
+        @if (showNotes()) {
+          <label class="field-label" for="pos-notes">Notas (opcional)</label>
+          <textarea
+            id="pos-notes"
+            rows="2"
+            maxlength="500"
+            class="field-input"
+            [value]="notes()"
+            (input)="notes.set($any($event.target).value)"
+          ></textarea>
+        } @else {
+          <button type="button" class="btn btn-ghost btn-sm" (click)="showNotes.set(true)">
+            + Agregar nota
+          </button>
+        }
+      </div>
+
+      <button
+        type="button"
+        class="btn btn-primary mt-4 w-full py-3 text-base"
+        [disabled]="!!blockReason() || saving()"
+        (click)="charge()"
+      >
+        {{ saving() ? 'Registrando…' : 'Cobrar ' + (total() | money) }}
+      </button>
+      @if (blockReason()) {
+        <p class="field-hint text-center">{{ blockReason() }}</p>
+      }
+      @if (lines().length) {
+        <button type="button" class="btn btn-ghost mt-2 w-full" (click)="clear()">
+          Vaciar venta
+        </button>
+      }
+    </section>
+  </div>
+
+  @if (lines().length) {
+    <div
+      class="glass-modal fixed inset-x-4 bottom-4 z-30 flex items-center justify-between gap-3 rounded-2xl px-4 py-3 lg:hidden"
+    >
+      <span class="text-sm font-bold text-gray-900"
+        >{{ itemCount() }} {{ itemCount() === 1 ? 'ítem' : 'ítems' }} · {{ total() | money }}</span
+      >
+      <button type="button" class="btn btn-primary btn-sm" (click)="goToCart()">Ir a cobrar</button>
+    </div>
+  }
+}

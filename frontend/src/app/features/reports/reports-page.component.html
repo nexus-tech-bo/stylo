@@ -1,0 +1,277 @@
+<app-page-header title="Reportes" subtitle="Rendimiento del salón">
+  @if (isAdmin()) {
+    <button
+      type="button"
+      class="btn btn-secondary"
+      [disabled]="exporting() || !!rangeMessage()"
+      (click)="exportCsv()"
+    >
+      <app-ui-icon name="download" class="h-4 w-4" />
+      {{ exporting() ? 'Exportando…' : 'Exportar CSV' }}
+    </button>
+  }
+</app-page-header>
+
+<div class="glass-panel mb-4 rounded-2xl p-3">
+  <app-date-range
+    [from]="range().from"
+    [to]="range().to"
+    [error]="rangeMessage()"
+    (rangeChange)="setRange($event)"
+  />
+</div>
+
+<!-- KPIs -->
+@if (!rangeMessage()) {
+  @if (summary.error()) {
+    <div class="glass-panel mb-4 rounded-3xl p-5">
+      <app-empty-state icon="alert" title="No se pudo cargar el resumen">
+        <button type="button" class="btn btn-secondary btn-sm" (click)="summary.reload()">
+          Reintentar
+        </button>
+      </app-empty-state>
+    </div>
+  } @else if (summary.value(); as s) {
+    <div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div class="kpi-tile">
+        <p class="kpi-label">Ventas</p>
+        <p class="kpi-value">{{ s.salesCount }}</p>
+      </div>
+      <div class="kpi-tile">
+        <p class="kpi-label">Total</p>
+        <p class="kpi-value text-xl">{{ s.salesTotal | money }}</p>
+      </div>
+      <div class="kpi-tile">
+        <p class="kpi-label">Ticket promedio</p>
+        <p class="kpi-value text-xl">{{ s.averageTicket | money }}</p>
+      </div>
+      <div class="kpi-tile">
+        <p class="kpi-label">Descuentos</p>
+        <p class="kpi-value text-xl">{{ s.totalDiscounts | money }}</p>
+      </div>
+      <div class="kpi-tile">
+        <p class="kpi-label">Impuestos (incluidos)</p>
+        <p class="kpi-value text-xl">{{ s.totalTax | money }}</p>
+      </div>
+      <div class="kpi-tile">
+        <p class="kpi-label">Anuladas</p>
+        <p class="kpi-value">{{ s.voidedSales }}</p>
+      </div>
+    </div>
+  } @else {
+    <div class="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <div class="skeleton h-24"></div>
+      }
+    </div>
+  }
+
+  <div class="grid gap-4 xl:grid-cols-3">
+    <!-- Sales by day (ADMIN) -->
+    @if (isAdmin()) {
+      <section
+        class="glass-panel min-w-0 rounded-3xl p-5 xl:col-span-2"
+        aria-labelledby="chart-title"
+      >
+        <div class="mb-3 flex items-center justify-between gap-2">
+          <h2 id="chart-title" class="section-title mb-0">Ventas por día</h2>
+          @if (days().length) {
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              [attr.aria-pressed]="showTable()"
+              (click)="showTable.set(!showTable())"
+            >
+              <app-ui-icon [name]="showTable() ? 'chart' : 'table'" class="h-4 w-4" />
+              {{ showTable() ? 'Ver como gráfico' : 'Ver como tabla' }}
+            </button>
+          }
+        </div>
+        @if (byDay.error()) {
+          <app-empty-state icon="alert" title="No se pudo cargar el gráfico">
+            <button type="button" class="btn btn-secondary btn-sm" (click)="byDay.reload()">
+              Reintentar
+            </button>
+          </app-empty-state>
+        } @else if (!byDay.hasValue()) {
+          <div class="skeleton h-56"></div>
+        } @else if (!days().length) {
+          <app-empty-state icon="chart" title="No hay ventas en este periodo." />
+        } @else if (showTable()) {
+          <div class="max-h-72 overflow-auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th class="text-right">Ventas</th>
+                  <th class="text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of days(); track d.date) {
+                  <tr>
+                    <td>{{ d.day | date: 'dd/MM/yyyy' }}</td>
+                    <td class="text-right tabular-nums">{{ d.count }}</td>
+                    <td class="text-right tabular-nums">{{ d.total | money }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="mb-1 text-xs font-semibold text-gray-500 tabular-nums">
+            {{ maxDayTotal() | money }}
+          </p>
+          <div class="overflow-x-auto">
+            <div
+              class="flex h-56 min-w-full items-end gap-1"
+              role="img"
+              [attr.aria-label]="
+                'Ventas por día: ' +
+                days().length +
+                ' días con ventas. Usa «Ver como tabla» para el detalle.'
+              "
+            >
+              @for (d of days(); track d.date; let i = $index) {
+                <div class="flex h-full min-w-3 flex-1 flex-col items-center justify-end gap-1">
+                  <div
+                    class="w-full rounded-t-lg bg-primary/70"
+                    [style.height.%]="(d.total / maxDayTotal()) * 100"
+                    [attr.title]="
+                      (d.day | date: 'dd/MM') + ': ' + d.count + ' ventas, ' + (d.total | money)
+                    "
+                  ></div>
+                  <span class="h-4 text-[10px] whitespace-nowrap text-gray-500">{{
+                    i % labelEvery() === 0 ? (d.day | date: 'dd/MM') : ''
+                  }}</span>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </section>
+    }
+
+    <!-- Payment methods -->
+    <section
+      class="glass-panel rounded-3xl p-5"
+      [class.xl:col-span-3]="!isAdmin()"
+      aria-labelledby="methods-title"
+    >
+      <h2 id="methods-title" class="section-title">Método de pago</h2>
+      @if (summary.error()) {
+        <p class="text-sm text-gray-500">Sin datos.</p>
+      } @else if (summary.value(); as s) {
+        @if (!s.byPaymentMethod.length || s.salesCount === 0) {
+          <p class="text-sm text-gray-500">No hay ventas en este periodo.</p>
+        } @else {
+          <ul class="space-y-3">
+            @for (m of s.byPaymentMethod; track m.method) {
+              <li>
+                <div class="mb-1 flex justify-between gap-2 text-sm">
+                  <span class="font-semibold">{{ paymentLabels[m.method] }}</span>
+                  <span class="tabular-nums">{{ m.total | money }} ({{ m.count }})</span>
+                </div>
+                <div class="h-2 rounded-full bg-white/60">
+                  <div
+                    class="h-2 rounded-full bg-primary/70"
+                    [style.width.%]="(m.total / maxMethodTotal()) * 100"
+                  ></div>
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      } @else {
+        <div class="skeleton h-32"></div>
+      }
+    </section>
+
+    @if (isAdmin()) {
+      <!-- Stylists -->
+      <section
+        class="glass-panel min-w-0 rounded-3xl p-5 xl:col-span-2"
+        aria-labelledby="stylists-title"
+      >
+        <h2 id="stylists-title" class="section-title">Estilistas</h2>
+        @if (stylists.error()) {
+          <app-empty-state icon="alert" title="No se pudo cargar">
+            <button type="button" class="btn btn-secondary btn-sm" (click)="stylists.reload()">
+              Reintentar
+            </button>
+          </app-empty-state>
+        } @else if (!stylists.hasValue()) {
+          <div class="skeleton h-32"></div>
+        } @else if (!stylists.value().length) {
+          <p class="text-sm text-gray-500">Sin servicios atendidos.</p>
+        } @else {
+          <div class="overflow-x-auto">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Estilista</th>
+                  <th class="text-right">Servicios</th>
+                  <th class="text-right">Vendido</th>
+                  <th class="hidden text-right sm:table-cell">Comisión %</th>
+                  <th class="text-right">Comisión</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (st of stylists.value(); track st.stylistId) {
+                  <tr>
+                    <td class="font-semibold text-gray-900">{{ st.stylist }}</td>
+                    <td class="text-right tabular-nums">{{ st.services }}</td>
+                    <td class="text-right whitespace-nowrap tabular-nums">
+                      {{ st.total | money: false }}
+                    </td>
+                    <td class="hidden text-right tabular-nums sm:table-cell">
+                      {{ st.commissionRate }} %
+                    </td>
+                    <td class="text-right font-bold whitespace-nowrap tabular-nums">
+                      {{ st.commission | money: false }}
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+
+      <!-- Top items -->
+      <section class="glass-panel rounded-3xl p-5" aria-labelledby="top-title">
+        <h2 id="top-title" class="section-title">Más vendidos</h2>
+        <app-segmented-tabs
+          class="mb-3"
+          [items]="topTabs"
+          [selectedId]="topType()"
+          (select)="topType.set($any($event))"
+        />
+        @if (top.error()) {
+          <app-empty-state icon="alert" title="No se pudo cargar">
+            <button type="button" class="btn btn-secondary btn-sm" (click)="top.reload()">
+              Reintentar
+            </button>
+          </app-empty-state>
+        } @else if (!top.hasValue()) {
+          <div class="skeleton h-32"></div>
+        } @else if (!top.value().length) {
+          <p class="text-sm text-gray-500">Sin datos.</p>
+        } @else {
+          <ol class="space-y-2 text-sm">
+            @for (item of top.value(); track item.id; let i = $index) {
+              <li class="flex items-baseline justify-between gap-3">
+                <span class="min-w-0 truncate"
+                  ><b class="text-gray-500">{{ i + 1 }}.</b> {{ item.name }}</span
+                >
+                <span class="shrink-0 tabular-nums"
+                  >{{ item.quantity }} · {{ item.total | money: false }}</span
+                >
+              </li>
+            }
+          </ol>
+        }
+      </section>
+    }
+  </div>
+}

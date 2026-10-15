@@ -1,0 +1,45 @@
+<app-page-header title="Mis comisiones" subtitle="Servicios que atendiste y tu comisión" />
+
+<div class="glass-panel mb-4 rounded-2xl p-3">
+  <app-date-range
+    [from]="range().from"
+    [to]="range().to"
+    [error]="rangeMessage()"
+    (rangeChange)="setRange($event)"
+  />
+</div>
+
+@if (rangeMessage()) {
+  <!-- message shown under the dates -->
+} @else if (commissions.error()) {
+  <app-empty-state icon="alert" title="No se pudieron cargar tus comisiones.">
+    <button type="button" class="btn btn-secondary btn-sm" (click)="commissions.reload()">
+      Reintentar
+    </button>
+  </app-empty-state>
+} @else if (totals(); as t) {
+  @if (t.empty) {
+    <app-empty-state icon="percent" title="No atendiste servicios en este periodo." />
+  } @else {
+    <div class="grid gap-3 sm:grid-cols-3">
+      <div class="kpi-tile">
+        <p class="kpi-label">Servicios</p>
+        <p class="kpi-value">{{ t.services }}</p>
+      </div>
+      <div class="kpi-tile">
+        <p class="kpi-label">Total vendido</p>
+        <p class="kpi-value">{{ t.total | money }}</p>
+      </div>
+      <div class="kpi-tile ring-2 ring-primary/30">
+        <p class="kpi-label">Tu comisión ({{ t.rate }} %)</p>
+        <p class="kpi-value !text-primary">{{ t.commission | money }}</p>
+      </div>
+    </div>
+  }
+} @else {
+  <div class="grid gap-3 sm:grid-cols-3">
+    @for (i of [1, 2, 3]; track i) {
+      <div class="skeleton h-24"></div>
+    }
+  </div>
+}

@@ -1,0 +1,99 @@
+<app-dialog-frame [title]="user ? 'Editar usuario' : 'Nuevo usuario'" (closed)="ref.close()">
+  <form id="user-form" [formGroup]="form" (ngSubmit)="save()" class="space-y-4" novalidate>
+    @if (error()) {
+      <p class="form-banner" role="alert">{{ error() }}</p>
+    }
+    <div>
+      <label class="field-label" for="user-name">Nombre *</label>
+      <input
+        id="user-name"
+        cdkFocusInitial
+        class="field-input"
+        formControlName="name"
+        maxlength="120"
+        autocomplete="off"
+      />
+      <app-field-error [control]="form.controls.name" />
+    </div>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="field-label" for="user-username">Usuario *</label>
+        <input
+          id="user-username"
+          class="field-input"
+          formControlName="username"
+          maxlength="50"
+          autocomplete="off"
+          autocapitalize="none"
+          spellcheck="false"
+        />
+        <p class="field-hint">Letras, números, punto, guion o guion bajo (3–50).</p>
+        <app-field-error [control]="form.controls.username" />
+      </div>
+      <div>
+        <label class="field-label" for="user-password">Contraseña {{ user ? '' : '*' }}</label>
+        <input
+          id="user-password"
+          type="password"
+          class="field-input"
+          formControlName="password"
+          maxlength="72"
+          autocomplete="new-password"
+          [placeholder]="user ? 'Dejar vacío para no cambiarla' : ''"
+        />
+        <app-field-error [control]="form.controls.password" />
+      </div>
+    </div>
+    <fieldset>
+      <legend class="field-label">Rol *</legend>
+      <div class="grid grid-cols-3 gap-2">
+        @for (r of roles; track r) {
+          <label class="choice-card text-xs sm:text-sm" [class.opacity-60]="isSelf">
+            <input type="radio" class="sr-only" formControlName="role" [value]="r" />
+            {{ roleLabels[r].label }}
+          </label>
+        }
+      </div>
+    </fieldset>
+    <div class="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label class="field-label" for="user-phone">Teléfono</label>
+        <input
+          id="user-phone"
+          type="tel"
+          class="field-input"
+          formControlName="phone"
+          maxlength="30"
+          autocomplete="off"
+        />
+        <app-field-error [control]="form.controls.phone" />
+      </div>
+      <div>
+        <label class="field-label" for="user-commission">Comisión %</label>
+        <input
+          id="user-commission"
+          type="number"
+          min="0"
+          max="100"
+          step="0.01"
+          class="field-input"
+          formControlName="commissionRate"
+        />
+        <p class="field-hint">Se aplica a los servicios que atiende.</p>
+        <app-field-error [control]="form.controls.commissionRate" />
+      </div>
+    </div>
+    <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-gray-600">
+      <input type="checkbox" class="h-4 w-4 accent-primary" formControlName="active" /> Activo
+    </label>
+    @if (isSelf) {
+      <p class="field-hint">No puedes cambiar tu propio rol ni desactivarte.</p>
+    }
+  </form>
+  <div dialogFooter class="contents">
+    <button type="button" class="btn btn-secondary" (click)="ref.close()">Cancelar</button>
+    <button type="submit" form="user-form" class="btn btn-primary" [disabled]="saving()">
+      {{ saving() ? 'Guardando…' : 'Guardar usuario' }}
+    </button>
+  </div>
+</app-dialog-frame>
